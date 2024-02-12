@@ -1,0 +1,165 @@
+{
+	"name": "ds_emp_scd2",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_emp_type1",
+						"type": "DatasetReference"
+					},
+					"name": "EmpFile"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_emp_type2",
+						"type": "DatasetReference"
+					},
+					"name": "EmpTable"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_emp_type2",
+						"type": "DatasetReference"
+					},
+					"name": "Insert"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_emp_type2",
+						"type": "DatasetReference"
+					},
+					"name": "Update"
+				}
+			],
+			"transformations": [
+				{
+					"name": "IsActiveDerivedColumn"
+				},
+				{
+					"name": "lookup1"
+				},
+				{
+					"name": "filter1"
+				},
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "select1"
+				},
+				{
+					"name": "select2"
+				},
+				{
+					"name": "alterRow1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          EmpID as integer,",
+				"          Name as string,",
+				"          Country as string,",
+				"          Department as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> EmpFile",
+				"source(output(",
+				"          surrkey as integer,",
+				"          empid as integer,",
+				"          empname as string,",
+				"          country as string,",
+				"          department as string,",
+				"          IsActive as integer",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> EmpTable",
+				"EmpFile derive(IsActive = 1) ~> IsActiveDerivedColumn",
+				"EmpFile, select1 lookup(EmpID == SQL_empid,",
+				"     multiple: true,",
+				"     broadcast: 'auto')~> lookup1",
+				"lookup1 filter(!isNull(SQL_empid)) ~> filter1",
+				"filter1 derive(SQL_IsActive = 0) ~> derivedColumn1",
+				"EmpTable select(mapColumn(",
+				"          SQL_surrkey = surrkey,",
+				"          SQL_empid = empid,",
+				"          SQL_empname = empname,",
+				"          SQL_country = country,",
+				"          SQL_department = department,",
+				"          SQL_IsActive = IsActive",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"derivedColumn1 select(mapColumn(",
+				"          SQL_surrkey,",
+				"          SQL_empid,",
+				"          SQL_empname,",
+				"          SQL_country,",
+				"          SQL_department,",
+				"          SQL_IsActive",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select2",
+				"select2 alterRow(updateIf(1==1)) ~> alterRow1",
+				"IsActiveDerivedColumn sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          surrkey as integer,",
+				"          empid as integer,",
+				"          empname as string,",
+				"          country as string,",
+				"          department as string,",
+				"          IsActive as integer",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          empid = EmpID,",
+				"          empname = Name,",
+				"          country = Country,",
+				"          department = Department,",
+				"          IsActive",
+				"     )) ~> Insert",
+				"alterRow1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          surrkey as integer,",
+				"          empid as integer,",
+				"          empname as string,",
+				"          country as string,",
+				"          department as string,",
+				"          IsActive as integer",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:false,",
+				"     updateable:true,",
+				"     upsertable:false,",
+				"     keys:['surrkey'],",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          surrkey = SQL_surrkey,",
+				"          empid = SQL_empid,",
+				"          empname = SQL_empname,",
+				"          country = SQL_country,",
+				"          department = SQL_department,",
+				"          IsActive = SQL_IsActive",
+				"     )) ~> Update"
+			]
+		}
+	}
+}

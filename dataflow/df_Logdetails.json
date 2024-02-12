@@ -1,0 +1,76 @@
+{
+	"name": "df_Logdetails",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_dummy",
+						"type": "DatasetReference"
+					},
+					"name": "Dummy"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_log",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "select1"
+				}
+			],
+			"scriptLines": [
+				"parameters{",
+				"     ADFName as string,",
+				"     PipelineName as string,",
+				"     RunID as string,",
+				"     TriggerName as string,",
+				"     TriggerType as string,",
+				"     TriggerTime as string,",
+				"     Status as string,",
+				"     LogFileName as string",
+				"}",
+				"source(output(",
+				"          Column_1 as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> Dummy",
+				"Dummy derive(ADFName = $ADFName,",
+				"          PipelineName = $PipelineName,",
+				"          RunID = $RunID,",
+				"          TriggerName = $TriggerName,",
+				"          TriggerType = $TriggerType,",
+				"          TriggerTime = $TriggerTime,",
+				"          Status = $Status) ~> derivedColumn1",
+				"derivedColumn1 select(mapColumn(",
+				"          ADFName,",
+				"          PipelineName,",
+				"          RunID,",
+				"          TriggerName,",
+				"          TriggerType,",
+				"          TriggerTime,",
+				"          Status",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"select1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:[($LogFileName)],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> sink1"
+			]
+		}
+	}
+}
